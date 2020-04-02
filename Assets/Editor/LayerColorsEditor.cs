@@ -10,13 +10,15 @@ public class LayerColorsEditor : Editor
 
         DrawDefaultInspector();
         LayerColorsHandeler myScript = (LayerColorsHandeler)target;
-        if (GUILayout.Button("Apply Settings"))
+        if (GUILayout.Button("Generate Colors (will overide the colors value)"))
         {
             if (myScript != null)
             {
-                myScript.UpdateLayers();
+                myScript.GenerateColorPallet();
             }
         }
+        myScript.updateLayers();
 
     }
+    
 }

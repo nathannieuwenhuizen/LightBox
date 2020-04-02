@@ -1,84 +1,91 @@
 ﻿// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
 
-Shader "UnityCoder/GradientGlow2" {
-	Properties{
-	_Color("Main Color", Color) = (.5,.5,.5,1)
-	_OutlineColor("Outline Color", Color) = (0,0,0,1)
-		//_Outline ("Outline width", Range (.002, 0.03)) = .005
-		_Outline("Outline width", Range(.002, 0.5)) = .005
-		_MainTex("Base (RGB)", 2D) = "white" { }
-	//        _ToonShade ("ToonShader Cubemap(RGB)", CUBE) = "" { Texgen CubeNormal }
+Shader "Custom/Post Outline"
+{
+	Properties
+	{
+		_MainTex("Main Texture",2D) = "white"{}
 	}
+		SubShader
+	{
+	Blend SrcAlpha OneMinusSrcAlpha
+		Pass
+		{
+			CGPROGRAM
 
-		CGINCLUDE
-		// Upgrade NOTE: excluded shader from DX11 and Xbox360; has structs without semantics (struct v2f members vpos)
-#pragma exclude_renderers d3d11 xbox360
-// Upgrade NOTE: excluded shader from Xbox360; has structs without semantics (struct v2f members vpos)
-#pragma exclude_renderers xbox360
-#include "UnityCG.cginc"
+			sampler2D _MainTex;
 
-struct appdata {
-		float4 vertex : POSITION;
-		float3 normal : NORMAL;
+	//_TexelSize is a float2 that says how much screen space a texel occupies.
+	float2 _MainTex_TexelSize;
+
+	#pragma vertex vert
+	#pragma fragment frag
+	#include "UnityCG.cginc"
+
+	struct v2f
+	{
+		float4 pos : SV_POSITION;
+		float2 uvs : TEXCOORD0;
 	};
 
-	struct v2f {
-		float4 pos : POSITION;
-		float3 vpos;
-		float4 color : COLOR;
-	};
-
-	uniform float _Outline;
-	uniform float4 _OutlineColor;
-
-	v2f vert(appdata v) {
+	v2f vert(appdata_base v)
+	{
 		v2f o;
+
+		//Despite the fact that we are only drawing a quad to the screen, Unity requires us to multiply vertices by our MVP matrix, presumably to keep things working when inexperienced people try copying code from other shaders.
 		o.pos = UnityObjectToClipPos(v.vertex);
 
-		float3 norm = mul((float3x3)UNITY_MATRIX_IT_MV, v.normal);
-		float2 offset = TransformViewToProjection(norm.xy);
+		//Also, we need to fix the UVs to match our screen space coordinates. There is a Unity define for this that should normally be used.
+		o.uvs = o.pos.xy / 2 + 0.5;
 
-		o.pos.xy += offset * o.pos.z * _Outline;
-		//        o.pos.xyz += v.normal*_Outline;
-		o.vpos = v.vertex.xyz;
-		o.color = _OutlineColor;
 		return o;
 	}
-	ENDCG
 
+	half4 frag(v2f i) : COLOR
+	{
+		//arbitrary number of iterations for now
+		int NumberOfIterations = 9;
 
+	//split texel size into smaller words
+	float TX_x = _MainTex_TexelSize.x;
+	float TX_y = _MainTex_TexelSize.y;
 
-		SubShader{
-		Tags { "RenderType" = "Opaque" }
-		//Tags { "RenderType"="Transparent" }
+	//and a final intensity that increments based on surrounding intensities.
+	float ColorIntensityInRadius;
 
-		// you can replace this pass with something else (rendering the globe)
-		UsePass "UnityCoder/DefaultDiffuse2/BASE"
+	//if something already exists underneath the fragment, discard the fragment.
+	if (tex2D(_MainTex,i.uvs.xy).r > 0)
+	{
+		discard;
+	}
 
-
-		Pass {
-		Name "OUTLINE"
-		Tags { "LightMode" = "Always" }
-		Cull Front
-		ZWrite On
-		ColorMask RGB
-		Blend SrcAlpha OneMinusSrcAlpha
-
-		CGPROGRAM
-		#pragma vertex vert
-		#pragma fragment frag
-
-		half4 frag(v2f i) :COLOR
+	//for every iteration we need to do horizontally
+	for (int k = 0; k < NumberOfIterations; k += 1)
+	{
+		//for every iteration we need to do vertically
+		for (int j = 0; j < NumberOfIterations; j += 1)
 		{
-		float3 gradientCenter = float3(0,0,0);
-		float3 pos = normalize(i.vpos.xyz - gradientCenter.xyz);
-		float4 c = float4(i.color.rgb,pos.z*i.color.a);
-		return c;
-
-
-		}
-		ENDCG
+			//increase our output color by the pixels in the area
+			ColorIntensityInRadius += tex2D(
+										  _MainTex,
+										  i.uvs.xy + float2
+													   (
+															(k - NumberOfIterations / 2)*TX_x,
+															(j - NumberOfIterations / 2)*TX_y
+													   )
+										 ).r;
 		}
 	}
-		Fallback "Toon/Basic"
+
+	//output some intensity of teal
+	return ColorIntensityInRadius * half4(0,1,1,1);
 }
+
+ENDCG
+
+}
+//end pass
+	}
+		//end subshader
+}
+//end shader

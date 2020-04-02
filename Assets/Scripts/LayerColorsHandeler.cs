@@ -4,33 +4,37 @@ using UnityEngine;
 
 public class LayerColorsHandeler : MonoBehaviour
 {
+    [Header("GeneratedColors")]
+    [SerializeField]
+    private Color[] colors;
+
+    [Header("Info")]
 
     [SerializeField]
-    private SpriteRenderer[] layers;
+    private GameObject[] layers;
     [SerializeField]
     private ColorInfo colorInfo;
 
-
-    public void UpdateLayers()
+    public void GenerateColorPallet()
     {
+        Debug.Log("GenrateColor pallet");
         Color.RGBToHSV(colorInfo.darkColor, out float H, out float S, out float V);
         Color.RGBToHSV(colorInfo.hueColor, out float endH, out float endS, out float endV);
         float val = V; //black
         float sat = S; //light
         float hue = H; //color
-        //Debug.Log("dark color | hue: " + H + " | sat: " + S + " | val: " + V);
-        //Debug.Log("light color | hue: " + endH + " | sat: " + endS + " | val: " + endV);
+
+        List<Color> list = new List<Color>();
 
         for (int i = 0; i < layers.Length; i++)
         {
-            //Debug.Log("index: "+ i + " | hue: " + hue);
 
             float presentage = (float)i / ((float)layers.Length - 1);
             float circularPrecentage = +Mathf.Sin(presentage * Mathf.PI);
             float cappedPrecentage = +Mathf.Min(presentage + presentage, 1);
 
-            val = Mathf.Lerp(V, endV, cappedPrecentage);
-            sat = Mathf.Lerp(S, endS, circularPrecentage);
+            val = Mathf.Lerp(V, endV, presentage);
+            sat = Mathf.Lerp(S, endS, presentage);
 
             if ( H - endH > 0.5f)
             {
@@ -50,7 +54,31 @@ public class LayerColorsHandeler : MonoBehaviour
 
             Color newColor = Color.HSVToRGB(hue, sat, val);
             newColor.a = colorInfo.alpha;
-            layers[ (layers.Length -1) - i].color = newColor;
+            //setColorForLayer(layers[(layers.Length - 1) - i], newColor, (layers.Length - 1) - i);
+            list.Add(newColor);
+        }
+        colors = list.ToArray();
+
+        //updateLayers();
+    }
+
+    public void setColorForLayer(GameObject layer, Color color, int orderIndex)
+    {
+        foreach(SpriteRenderer sr in layer.GetComponentsInChildren<SpriteRenderer>())
+        {
+            sr.color = color;
+            sr.sortingOrder = orderIndex;
+        }
+    }
+
+    public void updateLayers()
+    {
+        for (int i = 0; i < layers.Length; i++)
+        {
+            if (i < colors.Length)
+            {
+                setColorForLayer(layers[(layers.Length - 1) - i], colors[i], (layers.Length - 1) - i);
+            }
         }
     }
 }
@@ -60,4 +88,5 @@ public class ColorInfo {
     public Color hueColor;
     public Color darkColor;
     public float alpha = 0.8f;
+    public float minValue;
 }
