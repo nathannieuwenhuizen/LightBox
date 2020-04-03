@@ -8,13 +8,12 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: OuterGlow
-  m_Shader: {fileID: -6465566751694194690, guid: 8b9964ee0cf47d547ad751cf852d3b9f,
-    type: 3}
+  m_Shader: {fileID: 4800000, guid: b3de228dfab57d242aa0e71ad4b10665, type: 3}
   m_ShaderKeywords: ETC1_EXTERNAL_ALPHA
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 1
-  m_CustomRenderQueue: 3000
+  m_CustomRenderQueue: -1
   stringTagMap: {}
   disabledShaderPasses: []
   m_SavedProperties:
@@ -28,6 +27,10 @@ Material:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _Bloom:
+        m_Texture: {fileID: 2800000, guid: 3530e91054ae0d9488f33a150bf1e54b, type: 3}
+        m_Scale: {x: 2.37, y: 1}
+        m_Offset: {x: 2.21, y: 0}
     - _MainTex:
         m_Texture: {fileID: 2800000, guid: 3530e91054ae0d9488f33a150bf1e54b, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -49,12 +52,17 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Floats:
+    - PixelSnap: 0
     - Vector1_8548A233: 5
     - Vector1_BCCA33E0: 0.245
     - _Alpha: 0.535
     - _EnableExternalAlpha: 0
     - _OutlineThickness: 1
     - _ShowOutline: 1
+    - hstep: 0.6
+    - radius: 30
+    - resolution: 800
+    - vstep: 0.55
     m_Colors:
     - Color_4D154246: {r: 0.4770496, g: 1, b: 0, a: 0}
     - Color_53B6ECB9: {r: 1, g: 0.8031937, b: 0, a: 0}

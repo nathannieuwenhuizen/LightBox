@@ -1,91 +1,78 @@
 ﻿// Upgrade NOTE: replaced 'mul(UNITY_MATRIX_MVP,*)' with 'UnityObjectToClipPos(*)'
 
-Shader "Custom/Post Outline"
+Shader "Sprites/Multiply"
 {
 	Properties
 	{
-		_MainTex("Main Texture",2D) = "white"{}
+			[PerRendererData] _MainTex("Sprite Texture", 2D) = "white" {}
+			_Color("Tint", Color) = (1,1,1,1)
+			[MaterialToggle] PixelSnap("Pixel snap", Float) = 0
 	}
+
 		SubShader
-	{
-	Blend SrcAlpha OneMinusSrcAlpha
-		Pass
-		{
-			CGPROGRAM
+			{
+					Tags
+					{
+							"Queue" = "Transparent"
+							"IgnoreProjector" = "True"
+							"RenderType" = "Transparent"
+							"PreviewType" = "Plane"
+							"CanUseSpriteAtlas" = "True"
+					}
 
-			sampler2D _MainTex;
+					Cull Off
+					Lighting Off
+					ZWrite Off
+					Fog { Color(1,1,1,1) }
+					Blend Zero SrcColor
+				//AlphaTest Greater .01
+				ColorMask RGB
 
-	//_TexelSize is a float2 that says how much screen space a texel occupies.
-	float2 _MainTex_TexelSize;
+				Pass
+				{
+				CGPROGRAM
+						#pragma vertex vert
+						#pragma fragment frag
+						#pragma multi_compile DUMMY PIXELSNAP_ON
+						#include "UnityCG.cginc"
 
-	#pragma vertex vert
-	#pragma fragment frag
-	#include "UnityCG.cginc"
+						struct appdata_t
+						{
+								float4 vertex   : POSITION;
+								float4 color    : COLOR;
+								float2 texcoord : TEXCOORD0;
+						};
 
-	struct v2f
-	{
-		float4 pos : SV_POSITION;
-		float2 uvs : TEXCOORD0;
-	};
+						struct v2f
+						{
+								float4 vertex   : SV_POSITION;
+								fixed4 color : COLOR;
+								half2 texcoord  : TEXCOORD0;
+						};
 
-	v2f vert(appdata_base v)
-	{
-		v2f o;
+						fixed4 _Color;
 
-		//Despite the fact that we are only drawing a quad to the screen, Unity requires us to multiply vertices by our MVP matrix, presumably to keep things working when inexperienced people try copying code from other shaders.
-		o.pos = UnityObjectToClipPos(v.vertex);
+						v2f vert(appdata_t IN)
+						{
+								v2f OUT;
+								OUT.vertex = UnityObjectToClipPos(IN.vertex);
+								OUT.texcoord = IN.texcoord;
+								OUT.color = IN.color * _Color;
+								#ifdef PIXELSNAP_ON
+								OUT.vertex = UnityPixelSnap(OUT.vertex);
+								#endif
 
-		//Also, we need to fix the UVs to match our screen space coordinates. There is a Unity define for this that should normally be used.
-		o.uvs = o.pos.xy / 2 + 0.5;
+								return OUT;
+						}
 
-		return o;
-	}
+						sampler2D _MainTex;
 
-	half4 frag(v2f i) : COLOR
-	{
-		//arbitrary number of iterations for now
-		int NumberOfIterations = 9;
-
-	//split texel size into smaller words
-	float TX_x = _MainTex_TexelSize.x;
-	float TX_y = _MainTex_TexelSize.y;
-
-	//and a final intensity that increments based on surrounding intensities.
-	float ColorIntensityInRadius;
-
-	//if something already exists underneath the fragment, discard the fragment.
-	if (tex2D(_MainTex,i.uvs.xy).r > 0)
-	{
-		discard;
-	}
-
-	//for every iteration we need to do horizontally
-	for (int k = 0; k < NumberOfIterations; k += 1)
-	{
-		//for every iteration we need to do vertically
-		for (int j = 0; j < NumberOfIterations; j += 1)
-		{
-			//increase our output color by the pixels in the area
-			ColorIntensityInRadius += tex2D(
-										  _MainTex,
-										  i.uvs.xy + float2
-													   (
-															(k - NumberOfIterations / 2)*TX_x,
-															(j - NumberOfIterations / 2)*TX_y
-													   )
-										 ).r;
-		}
-	}
-
-	//output some intensity of teal
-	return ColorIntensityInRadius * half4(0,1,1,1);
+						fixed4 frag(v2f IN) : COLOR
+						{
+								half4 prev = IN.color * tex2D(_MainTex, IN.texcoord);
+								return lerp(half4(1,1,1,1), prev, prev.a);
+						}
+				ENDCG
+				}
+			}
 }
-
-ENDCG
-
-}
-//end pass
-	}
-		//end subshader
-}
-//end shader
