@@ -10,8 +10,10 @@ public class ParalaxBackground : MonoBehaviour
     [Range(-1,1)]
     [SerializeField]
     private float effectMultiplier = 0;
+    private float zPos;
     void Start()
     {
+        zPos = transform.position.z;
         cameraTransform = Camera.main.transform;
         previousPos = cameraTransform.position;
     }
@@ -19,7 +21,11 @@ public class ParalaxBackground : MonoBehaviour
     void LateUpdate()
     {
         Vector3 delta = cameraTransform.position - previousPos;
-        transform.position += delta * effectMultiplier;
+
+        Vector3 newPos = transform.position += delta * effectMultiplier;
+        newPos.z = zPos;
+        transform.position = newPos;
+
         previousPos = cameraTransform.position;
     }
 }
